@@ -99,29 +99,36 @@ function parseInvoiceText(text) {
     return soloDigitos.length < 15; // ignora claves electrónicas largas
   }).join("\n");
 
-  // Estrategia 1: "TOTAL EN COLONES" o "TOTAL" seguido de número (patrón CR común)
-  const totalCRRx = /total\s*(?:en\s*colones)?\s*[:\s,C]*([\d.,]+)/gi;
-  const totalCRMatches = [...textLimpio.matchAll(totalCRRx)];
-  if (totalCRMatches.length > 0) {
-    totalCRMatches.forEach((m) => {
-      const raw = m[1].replace(/\./g, "").replace(/,/g, ".");
-      const n = parseFloat(raw);
-      if (!isNaN(n) && n > 0 && n < 10000000) monto = n;
-    });
-  }
+  // Estrategia 1: línea que EMPIECE con "total" pero NO sea "sub total"
+  // Recorre línea por línea para capturar el total final
+  const lineas = textLimpio.split("\n");
+  lineas.forEach((line) => {
+    const lineLow = line.toLowerCase().trim();
+    const esTotalFinal = /^total/i.test(lineLow) && !/sub/i.test(lineLow) && !/parcial/i.test(lineLow);
+    const esTotalColones = /total\s*(?:en\s*)?colones/i.test(lineLow);
+    const esTotalPagar = /total\s*a\s*pagar/i.test(lineLow);
+    if (esTotalFinal || esTotalColones || esTotalPagar) {
+      const numMatch = line.match(/([\d]+(?:[.,][\d]+)*)\s*$/);
+      if (numMatch) {
+        const raw = numMatch[1].replace(/\./g, "").replace(/,/g, ".");
+        const n = parseFloat(raw);
+        if (!isNaN(n) && n > 0 && n < 10000000 && n > monto) monto = n;
+      }
+    }
+  });
 
-  // Estrategia 2: línea con "importe", "monto", "a pagar", "neto" + número
+  // Estrategia 2: "gran total", "monto total", "importe total", "a pagar", "neto"
   if (monto === 0) {
-    const montoRx = /(?:importe|monto|a\s*pagar|neto)\s*[:\s]*([\d.,]+)/gi;
+    const montoRx = /(?:gran\s*total|monto\s*total|importe\s*total|a\s*pagar|neto)\s*[:\s₡C]*([\d.,]+)/gi;
     const montoMatches = [...textLimpio.matchAll(montoRx)];
     montoMatches.forEach((m) => {
       const raw = m[1].replace(/\./g, "").replace(/,/g, ".");
       const n = parseFloat(raw);
-      if (!isNaN(n) && n > 0 && n < 10000000) monto = n;
+      if (!isNaN(n) && n > 0 && n < 10000000 && n > monto) monto = n;
     });
   }
 
-  // Estrategia 3: ₡ seguido de número razonable
+    // Estrategia 3: ₡ seguido de número razonable
   if (monto === 0) {
     const colonMatches = [...textLimpio.matchAll(/₡\s*([\d.,]+)/g)];
     colonMatches.forEach((m) => {
@@ -151,10 +158,10 @@ function parseInvoiceText(text) {
     fecha = `${yr}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
   }
 
-  // N° factura
-  const facturaRx = /(?:factura|ticket|recibo|N[°º]?|#)\s*:?\s*([A-Z0-9\-]{3,20})/i;
+  // N° factura — patrones comunes en facturas costarricenses
+  const facturaRx = /(?:factura\s*(?:electr[oó]nica)?\s*(?:n[°º]?|num(?:ero)?)?|n[°º]?\s*(?:de\s*)?factura|ticket\s*(?:n[°º]?)?|recibo\s*(?:n[°º]?)?|comprobante\s*(?:n[°º]?)?|folio\s*(?:n[°º]?)?|n[°º]|#)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-\/]{1,20})/i;
   const facturaM  = text.match(facturaRx);
-  const numero_factura = facturaM ? facturaM[1] : "";
+  const numero_factura = facturaM ? facturaM[1].trim() : "";
 
   // Proveedor: primera línea que parece nombre de comercio
   const ignorar = /^(fecha|date|total|subtotal|iva|impuesto|gracias|factura|ticket|recibo|tel|fax|www|http)/i;
