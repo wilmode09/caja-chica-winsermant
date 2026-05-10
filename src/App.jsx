@@ -29,8 +29,7 @@ import { useState, useRef, useCallback } from "react";
 //  🔑  CONFIGURACIÓN  ←  edita esto
 // ══════════════════════════════════════════
 const VISION_API_KEY   = "AIzaSyBM1GIX7BG1xq3sJvREfPGqACVJKcQUnqo";
-const APPS_SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbwXH8a6RUT15YsYN8UEW3sgEK7xSbeTDMziEzuVKecrmtVL2JCW-Jl6ekEs3nJbOdag/exec;
-
+const APPS_SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbxVzGijsNh0wUEjVh4WEvmaqcNcQayuacjS7qO4m7v4oW4rYn2lJRtx8_UR31-Lx1wC/exec";
 // ══════════════════════════════════════════
 
 // ─── Paleta ───────────────────────────────
