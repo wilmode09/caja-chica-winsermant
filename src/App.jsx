@@ -158,8 +158,9 @@ function parseInvoiceText(text) {
     fecha = `${yr}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;
   }
 
-  // N° factura — patrones comunes en facturas costarricenses
-  const facturaRx = /(?:factura\s*(?:electr[oó]nica)?\s*(?:n[°º]?|num(?:ero)?)?|n[°º]?\s*(?:de\s*)?factura|ticket\s*(?:n[°º]?)?|recibo\s*(?:n[°º]?)?|comprobante\s*(?:n[°º]?)?|folio\s*(?:n[°º]?)?|n[°º]|#)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-\/]{1,20})/i;
+  // N° factura — acepta números largos, alfanuméricos y combinaciones
+  // Patrones: Factura, Factura electrónica, Número de factura, N°, Ticket, Recibo, Folio, #
+  const facturaRx = /(?:factura\s*(?:electr[oó]nica)?\s*(?:n[°º]?|num(?:ero)?)?|n[°º]?\s*(?:de\s*)?factura|ticket\s*(?:n[°º]?)?|recibo\s*(?:n[°º]?)?|comprobante\s*(?:n[°º]?)?|folio\s*(?:n[°º]?)?|n[°º]\s*[:\-]?|#\s*)\s*[:\-]?\s*(\d{3,30}|[A-Z0-9][A-Z0-9\-\/]{2,20})/i;
   const facturaM  = text.match(facturaRx);
   const numero_factura = facturaM ? facturaM[1].trim() : "";
 
