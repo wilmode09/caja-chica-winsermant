@@ -185,7 +185,17 @@ function parseInvoiceText(text) {
 
 // ─── Enviar al Apps Script → Sheets ───────
 async function sendToSheet(employee, invoices) {
-  const body = JSON.stringify({ employee, invoices, timestamp: new Date().toISOString() });
+  // Limpiar invoices — excluir campos locales no serializables (blob URLs, rawText)
+  const invoicesLimpias = invoices.map((inv) => ({
+    fecha:          inv.fecha,
+    proveedor:      inv.proveedor,
+    descripcion:    inv.descripcion,
+    categoria:      inv.categoria,
+    numero_factura: inv.numero_factura || "",
+    monto:          inv.monto,
+    imageBase64:    inv.imageBase64 || "",
+  }));
+  const body = JSON.stringify({ employee, invoices: invoicesLimpias, timestamp: new Date().toISOString() });
   const res  = await fetch(APPS_SCRIPT_URL, { method: "POST", body });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
