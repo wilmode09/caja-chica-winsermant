@@ -367,7 +367,9 @@ function CaptureScreen({ employee }) {
       const parsed = parseInvoiceText(text);
       setInvoices((prev) => [
         { id: Date.now(), ...parsed,
-          imagePreview: URL.createObjectURL(file), rawText: text },
+          imagePreview: URL.createObjectURL(file),
+          imageBase64: b64,
+          rawText: text },
         ...prev,
       ]);
     } catch (e) {
