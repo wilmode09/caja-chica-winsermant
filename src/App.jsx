@@ -29,7 +29,7 @@ import { useState, useRef, useCallback } from "react";
 //  🔑  CONFIGURACIÓN  ←  edita esto
 // ══════════════════════════════════════════
 const VISION_API_KEY   = "AIzaSyBM1GIX7BG1xq3sJvREfPGqACVJKcQUnqo";
-const APPS_SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbz_Cdi5YD5rSRpgJw1HsnixpMOM8bYMVlvC8wUoP-DA9-CZ9nX1UcO6WywwTcE1Hs4N/exec";
+const APPS_SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbzMU0wPWnZDoBDlI2icjqOIk5H1VAZPls-iOOYNIZU5_VLYkXd86g-rmS7te_qXKqv-/exec";
 // ══════════════════════════════════════════
 
 // ─── Paleta ───────────────────────────────
@@ -90,13 +90,56 @@ async function runVisionOCR(base64Image) {
 function parseInvoiceText(text) {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
-  // Monto: busca el número más grande con símbolo monetario
-  const montoMatches = [...text.matchAll(/(?:₡|CRC|¢|colones?)?\s*(\d[\d\s,.]+\d)/gi)];
+  // Monto: parser inteligente para facturas costarricenses
   let monto = 0;
-  montoMatches.forEach((m) => {
-    const n = parseFloat(m[1].replace(/[\s,]/g, "").replace(/\.(?=\d{3})/g, ""));
-    if (!isNaN(n) && n > monto) monto = n;
-  });
+
+  // Primero limpiar el texto eliminando líneas de clave/consecutivo (números largos >15 dígitos)
+  const textLimpio = text.split("\n").filter(line => {
+    const soloDigitos = line.replace(/\s/g, "").replace(/[^0-9]/g, "");
+    return soloDigitos.length < 15; // ignora claves electrónicas largas
+  }).join("\n");
+
+  // Estrategia 1: "TOTAL EN COLONES" o "TOTAL" seguido de número (patrón CR común)
+  const totalCRRx = /total\s*(?:en\s*colones)?\s*[:\s,C]*([\d.,]+)/gi;
+  const totalCRMatches = [...textLimpio.matchAll(totalCRRx)];
+  if (totalCRMatches.length > 0) {
+    totalCRMatches.forEach((m) => {
+      const raw = m[1].replace(/\./g, "").replace(/,/g, ".");
+      const n = parseFloat(raw);
+      if (!isNaN(n) && n > 0 && n < 10000000) monto = n;
+    });
+  }
+
+  // Estrategia 2: línea con "importe", "monto", "a pagar", "neto" + número
+  if (monto === 0) {
+    const montoRx = /(?:importe|monto|a\s*pagar|neto)\s*[:\s]*([\d.,]+)/gi;
+    const montoMatches = [...textLimpio.matchAll(montoRx)];
+    montoMatches.forEach((m) => {
+      const raw = m[1].replace(/\./g, "").replace(/,/g, ".");
+      const n = parseFloat(raw);
+      if (!isNaN(n) && n > 0 && n < 10000000) monto = n;
+    });
+  }
+
+  // Estrategia 3: ₡ seguido de número razonable
+  if (monto === 0) {
+    const colonMatches = [...textLimpio.matchAll(/₡\s*([\d.,]+)/g)];
+    colonMatches.forEach((m) => {
+      const raw = m[1].replace(/\./g, "").replace(/,/g, ".");
+      const n = parseFloat(raw);
+      if (!isNaN(n) && n > 0 && n < 10000000 && n > monto) monto = n;
+    });
+  }
+
+  // Estrategia 4: fallback — busca números entre 100 y 9,999,999 (rango razonable de facturas CR)
+  if (monto === 0) {
+    const numMatches = [...textLimpio.matchAll(/([\d]{1,3}(?:[.,][\d]{3})*(?:[.,][\d]{2})?)/g)];
+    numMatches.forEach((m) => {
+      const raw = m[1].replace(/\./g, "").replace(/,/g, ".");
+      const n = parseFloat(raw);
+      if (!isNaN(n) && n >= 100 && n < 10000000 && n > monto) monto = n;
+    });
+  }
 
   // Fecha
   const fechaRx = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/;
@@ -156,15 +199,18 @@ const toBase64 = (file) =>
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Sans+3:wght@400;600;700&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:${C.bg};font-family:'Source Sans 3',sans-serif}
+  html{height:-webkit-fill-available}
+  body{background:${C.bg};font-family:'Source Sans 3',sans-serif;min-height:-webkit-fill-available;-webkit-text-size-adjust:100%;overflow-x:hidden}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
   input::placeholder{color:${C.border}}
+  input,select,button{-webkit-appearance:none;appearance:none;font-size:16px}
   input:focus,select:focus{outline:none;border-color:${C.accent}!important;box-shadow:0 0 0 3px ${C.accentLt}}
   ::-webkit-scrollbar{width:4px}
   ::-webkit-scrollbar-thumb{background:${C.border};border-radius:4px}
   select option{background:#fff}
+  img{max-width:100%;height:auto}
 `;
 
 function Pill({ label, color }) {
@@ -342,7 +388,7 @@ function CaptureScreen({ employee }) {
   if (status === "done") return <SuccessScreen employee={employee} invoices={invoices} total={total} folio={serverFolio} />;
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 16px 100px" }}>
+    <div style={{ maxWidth: "100%", width: "100%", margin: "0 auto", padding: "20px 16px 120px", overflowX: "hidden" }}>
       <style>{css}</style>
 
       {/* Header */}
@@ -439,7 +485,9 @@ function CaptureScreen({ employee }) {
           background: C.surface + "f2", backdropFilter: "blur(14px)",
           borderTop: `1.5px solid ${C.border}`,
           padding: "14px 20px",
+          paddingBottom: "calc(14px + env(safe-area-inset-bottom))",
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+          zIndex: 100,
         }}>
           <div>
             <div style={{ fontWeight: 700, color: C.ink, fontSize: 16 }}>{fmt(total)}</div>
