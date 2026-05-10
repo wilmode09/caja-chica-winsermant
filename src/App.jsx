@@ -200,6 +200,30 @@ const toBase64 = (file) =>
     r.readAsDataURL(file);
   });
 
+// Comprime imagen antes de enviar (máx 800px, calidad 70%)
+const comprimirImagen = (file) =>
+  new Promise((res, rej) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 800;
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else        { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      res(dataUrl.split(",")[1]);
+    };
+    img.onerror = rej;
+    img.src = url;
+  });
+
 // ══════════════════════════════════════════
 //  UI COMPONENTS
 // ══════════════════════════════════════════
@@ -361,14 +385,15 @@ function CaptureScreen({ employee }) {
     setStatus("scanning");
     setError("");
     try {
-      const b64  = await toBase64(file);
+      const b64       = await toBase64(file);           // base64 completo para OCR
+      const b64Small  = await comprimirImagen(file);    // base64 comprimido para Drive
       const text = await runVisionOCR(b64);
       if (!text) throw new Error("No se detectó texto en la imagen");
       const parsed = parseInvoiceText(text);
       setInvoices((prev) => [
         { id: Date.now(), ...parsed,
           imagePreview: URL.createObjectURL(file),
-          imageBase64: b64,
+          imageBase64: b64Small,
           rawText: text },
         ...prev,
       ]);
