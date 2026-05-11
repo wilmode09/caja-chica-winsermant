@@ -657,6 +657,7 @@ function ManualModal({ onSave, onClose }) {
   const [preview, setPreview]   = useState(null);
   const [b64Foto, setB64Foto]   = useState("");
   const fotoRef                 = useRef();
+  const galeriaRef              = useRef();
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
   const valido = f.proveedor.trim() && f.descripcion.trim() && f.fecha &&
                 f.monto && Number(f.monto) > 0 && f.numero_factura.trim() && b64Foto;
@@ -719,7 +720,13 @@ function ManualModal({ onSave, onClose }) {
         {/* Foto de la factura */}
         <div style={{ marginBottom: 20 }}>
           <Lbl>Foto de la factura *</Lbl>
+
+          {/* Input cámara */}
           <input ref={fotoRef} type="file" accept="image/*" capture="environment"
+            style={{ display: "none" }} onChange={(e) => handleFoto(e.target.files[0])} />
+
+          {/* Input galería */}
+          <input ref={galeriaRef} type="file" accept="image/*"
             style={{ display: "none" }} onChange={(e) => handleFoto(e.target.files[0])} />
 
           {preview ? (
@@ -728,20 +735,38 @@ function ManualModal({ onSave, onClose }) {
                 style={{ width: "100%", maxHeight: 200, objectFit: "cover",
                   borderRadius: 10, border: `1.5px solid ${C.border}` }} />
               <button
-                onClick={() => { setPreview(null); setB64Foto(""); fotoRef.current.value = ""; }}
+                onClick={() => {
+                  setPreview(null); setB64Foto("");
+                  fotoRef.current.value = "";
+                  galeriaRef.current.value = "";
+                }}
                 style={{ position: "absolute", top: 8, right: 8, background: C.danger,
                   color: "#fff", border: "none", borderRadius: "50%", width: 28, height: 28,
                   cursor: "pointer", fontSize: 14, fontWeight: 700 }}>✕</button>
             </div>
           ) : (
-            <div
-              onClick={() => fotoRef.current.click()}
-              style={{ border: `2px dashed ${C.border}`, borderRadius: 10,
-                padding: "20px", textAlign: "center", cursor: "pointer",
-                background: C.card }}>
-              <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
-              <div style={{ fontSize: 13, color: C.muted, fontWeight: 600 }}>
-                Tomar foto de la factura
+            <div style={{ display: "flex", gap: 10 }}>
+              {/* Botón cámara */}
+              <div
+                onClick={() => fotoRef.current.click()}
+                style={{ flex: 1, border: `2px dashed ${C.border}`, borderRadius: 10,
+                  padding: "16px 8px", textAlign: "center", cursor: "pointer",
+                  background: C.card }}>
+                <div style={{ fontSize: 26, marginBottom: 4 }}>📷</div>
+                <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>
+                  Tomar foto
+                </div>
+              </div>
+              {/* Botón galería */}
+              <div
+                onClick={() => galeriaRef.current.click()}
+                style={{ flex: 1, border: `2px dashed ${C.border}`, borderRadius: 10,
+                  padding: "16px 8px", textAlign: "center", cursor: "pointer",
+                  background: C.card }}>
+                <div style={{ fontSize: 26, marginBottom: 4 }}>🖼️</div>
+                <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>
+                  Adjuntar foto
+                </div>
               </div>
             </div>
           )}
