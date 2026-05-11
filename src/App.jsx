@@ -51,8 +51,10 @@ const C = {
 
 
 // ─── Helpers ──────────────────────────────
+const TOTAL_CAJA = 100000;
+
 const fmt = (n) =>
-  Number(n || 0).toLocaleString("es-CR", { style: "currency", currency: "CRC", minimumFractionDigits: 0 });
+  "₡" + Number(n || 0).toLocaleString("es-CR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -862,11 +864,13 @@ function SuccessScreen({ employee, invoices, total, folio }) {
         borderRadius: 18, padding: 24, border: `1.5px solid ${C.border}`,
         boxShadow: "0 4px 24px rgba(0,0,0,0.06)", animation: "fadeUp 0.4s ease 0.2s both" }}>
         {[
-          ["N° Reporte",        folio, false, true],
-          ["Empleado",          employee.name],
-          ["Área",              employee.dept],
-          ["Facturas enviadas", invoices.length],
-          ["Total a reembolsar", fmt(total), true],
+          ["N° Reporte",       folio,                    false, true ],
+          ["Empleado",         employee.name,            false, false],
+          ["Área",             employee.dept,            false, false],
+          ["Facturas enviadas",invoices.length,          false, false],
+          ["Total Caja",       fmt(TOTAL_CAJA),          false, false],
+          ["Reintegro",        fmt(total),               false, false],
+          ["Saldo en Caja",    fmt(TOTAL_CAJA - total),  true,  false],
         ].map(([label, value, accent, mono]) => (
           <div key={label} style={{ display: "flex", justifyContent: "space-between",
             padding: "11px 0", borderBottom: `1px solid ${C.border}` }}>
