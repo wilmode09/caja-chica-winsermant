@@ -580,7 +580,7 @@ function CaptureScreen({ employee }) {
       {showManual && (
         <ManualModal
           onSave={(nueva) => {
-            setInvoices((p) => [{ id: Date.now(), ...nueva, imageBase64: "", imagePreview: null }, ...p]);
+            setInvoices((p) => [{ id: Date.now(), ...nueva }, ...p]);
             setShowManual(false);
           }}
           onClose={() => setShowManual(false)}
@@ -663,8 +663,15 @@ function ManualModal({ onSave, onClose }) {
 
   const handleFoto = async (file) => {
     if (!file) return;
-    const b64 = await comprimirImagen(file);
-    setB64Foto(b64);
+    try {
+      // Intentar comprimir primero
+      const b64 = await comprimirImagen(file);
+      setB64Foto(b64);
+    } catch(e) {
+      // Fallback: usar toBase64 sin comprimir
+      const b64 = await toBase64(file);
+      setB64Foto(b64);
+    }
     setPreview(URL.createObjectURL(file));
   };
 
