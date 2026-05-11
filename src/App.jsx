@@ -384,6 +384,7 @@ function CaptureScreen({ employee }) {
   const [invoices, setInvoices] = useState([]);
   const [status, setStatus]     = useState("idle"); // idle | scanning | sending | done
   const [editIdx, setEditIdx]   = useState(null);
+  const [showManual, setShowManual] = useState(false);
   const [error, setError]       = useState("");
   const fileRef = useRef();
 
@@ -472,35 +473,50 @@ function CaptureScreen({ employee }) {
       <input ref={fileRef} type="file" accept="image/*" capture="environment"
         style={{ display: "none" }} onChange={(e) => handleFile(e.target.files[0])} />
 
-      <div
-        onClick={() => status === "idle" && fileRef.current.click()}
-        style={{
-          border: `2px dashed ${status === "scanning" ? C.accent : C.border}`,
-          borderRadius: 18, padding: "32px 20px", textAlign: "center",
-          cursor: status === "idle" ? "pointer" : "default",
-          background: status === "scanning" ? C.accentLt : C.card,
-          transition: "all 0.2s", marginBottom: 24,
-          animation: status === "scanning" ? "pulse 1.2s ease infinite" : "none",
-        }}
-      >
-        {status === "scanning" ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-            <Loader label="Google Vision analizando…" />
-            <span style={{ color: C.muted, fontSize: 13 }}>
-              Extrayendo proveedor, monto y fecha
-            </span>
-          </div>
-        ) : (
-          <>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>📷</div>
-            <div style={{ fontWeight: 700, fontSize: 17, color: C.ink }}>
-              Fotografiar factura
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {/* Botón cámara */}
+        <div
+          onClick={() => status === "idle" && fileRef.current.click()}
+          style={{
+            flex: 2,
+            border: `2px dashed ${status === "scanning" ? C.accent : C.border}`,
+            borderRadius: 18, padding: "28px 16px", textAlign: "center",
+            cursor: status === "idle" ? "pointer" : "default",
+            background: status === "scanning" ? C.accentLt : C.card,
+            transition: "all 0.2s",
+            animation: status === "scanning" ? "pulse 1.2s ease infinite" : "none",
+          }}
+        >
+          {status === "scanning" ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+              <Loader label="Google Vision analizando…" />
+              <span style={{ color: C.muted, fontSize: 13 }}>Extrayendo datos…</span>
             </div>
-            <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
-              Google Vision leerá el texto automáticamente
-            </div>
-          </>
-        )}
+          ) : (
+            <>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>Fotografiar</div>
+              <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>OCR automático</div>
+            </>
+          )}
+        </div>
+
+        {/* Botón manual */}
+        <div
+          onClick={() => status === "idle" && setShowManual(true)}
+          style={{
+            flex: 1,
+            border: `2px dashed ${C.border}`,
+            borderRadius: 18, padding: "28px 10px", textAlign: "center",
+            cursor: status === "idle" ? "pointer" : "default",
+            background: C.card,
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: 36, marginBottom: 8 }}>✏️</div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>Manual</div>
+          <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>Sin foto</div>
+        </div>
       </div>
 
       {/* Lista de facturas */}
@@ -559,6 +575,17 @@ function CaptureScreen({ employee }) {
           onClose={() => setEditIdx(null)}
         />
       )}
+
+      {/* Modal ingreso manual */}
+      {showManual && (
+        <ManualModal
+          onSave={(nueva) => {
+            setInvoices((p) => [{ id: Date.now(), ...nueva, imageBase64: "", imagePreview: null }, ...p]);
+            setShowManual(false);
+          }}
+          onClose={() => setShowManual(false)}
+        />
+      )}
     </div>
   );
 }
@@ -611,6 +638,75 @@ function InvoiceCard({ inv, onEdit, onDelete }) {
             fontFamily: "inherit", transition: "background 0.15s",
           }}>{label}</button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal ingreso manual ─────────────────
+function ManualModal({ onSave, onClose }) {
+  const today = () => new Date().toISOString().slice(0, 10);
+  const [f, setF] = useState({
+    fecha: today(),
+    proveedor: "",
+    descripcion: "",
+    monto: "",
+    numero_factura: "",
+    categoria: "Otro",
+  });
+  const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
+  const valido = f.proveedor.trim() && f.monto && Number(f.monto) > 0;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#00000088", zIndex: 200,
+      display: "flex", alignItems: "flex-end" }}>
+      <div style={{ background: C.surface, borderRadius: "20px 20px 0 0",
+        padding: 24, width: "100%", maxHeight: "92vh", overflowY: "auto",
+        border: `1.5px solid ${C.border}` }}>
+
+        <div style={{ display: "flex", justifyContent: "space-between",
+          alignItems: "center", marginBottom: 20 }}>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20,
+            fontWeight: 900, color: C.ink }}>✏️ Ingreso Manual</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none",
+            color: C.muted, fontSize: 22, cursor: "pointer" }}>✕</button>
+        </div>
+
+        <div style={{ background: C.accentLt, borderRadius: 10, padding: "10px 14px",
+          marginBottom: 16, fontSize: 13, color: C.accent, fontWeight: 600 }}>
+          📋 Completa los datos de la factura manualmente
+        </div>
+
+        {[
+          { k: "proveedor",      label: "Proveedor / Comercio *", placeholder: "Ej. Supermercado Buen Precio" },
+          { k: "descripcion",    label: "Descripción", placeholder: "Ej. Almuerzo equipo de trabajo" },
+          { k: "fecha",          label: "Fecha de la factura", type: "date" },
+          { k: "monto",          label: "Monto (₡) *", type: "number", placeholder: "Ej. 9500" },
+          { k: "numero_factura", label: "N° de Factura", placeholder: "Ej. 51122" },
+        ].map(({ k, label, type, placeholder }) => (
+          <div key={k} style={{ marginBottom: 14 }}>
+            <Lbl>{label}</Lbl>
+            <Inp value={f[k] || ""} onChange={set(k)} type={type || "text"} placeholder={placeholder || ""} />
+          </div>
+        ))}
+
+        <div style={{ marginBottom: 20 }}>
+          <Lbl>Categoría</Lbl>
+          <select value={f.categoria}
+            onChange={(e) => setF((p) => ({ ...p, categoria: e.target.value }))}
+            style={{ width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 9,
+              padding: "10px 13px", fontSize: 15, fontFamily: "inherit",
+              background: C.surface, color: C.ink }}>
+            {CATS.map((c) => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+
+        <p style={{ color: C.muted, fontSize: 12, marginBottom: 16 }}>* Campos obligatorios</p>
+
+        <Btn full onClick={() => valido && onSave({ ...f, monto: Number(f.monto) })}
+          disabled={!valido}>
+          Agregar factura
+        </Btn>
       </div>
     </div>
   );
