@@ -320,6 +320,52 @@ const Inp = ({ value, onChange, placeholder, type = "text" }) => (
       background: C.surface, color: C.ink, marginBottom: 2 }} />
 );
 
+// Input de monto con formato automático: puntos para miles, coma para decimales
+function InpMonto({ value, onChange, placeholder }) {
+  const [display, setDisplay] = useState(
+    value ? Number(value).toLocaleString("es-CR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ""
+  );
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    // Solo permitir dígitos, puntos y comas
+    const cleaned = raw.replace(/[^0-9,.]/g, "");
+    setDisplay(cleaned);
+    // Convertir a número para guardar en el estado
+    const num = parseFloat(cleaned.replace(/\./g, "").replace(",", "."));
+    onChange(!isNaN(num) ? num : "");
+  };
+
+  const handleBlur = () => {
+    // Al salir del campo, formatear correctamente
+    const num = parseFloat(String(value).replace(/\./g, "").replace(",", "."));
+    if (!isNaN(num) && num > 0) {
+      setDisplay(num.toLocaleString("es-CR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    } else {
+      setDisplay("");
+    }
+  };
+
+  const handleFocus = () => {
+    // Al entrar al campo, mostrar solo el número sin formato para editar fácil
+    if (value) setDisplay(String(value).replace(".", ","));
+  };
+
+  return (
+    <input
+      value={display}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onFocus={handleFocus}
+      placeholder={placeholder || "Ej. 9.500,00"}
+      inputMode="decimal"
+      style={{ width: "100%", border: `1.5px solid ${C.border}`, borderRadius: 9,
+        padding: "10px 13px", fontSize: 15, fontFamily: "inherit",
+        background: C.surface, color: C.ink, marginBottom: 2 }}
+    />
+  );
+}
+
 // ══════════════════════════════════════════
 //  SCREEN 1 — Identificación
 // ══════════════════════════════════════════
@@ -698,7 +744,6 @@ function ManualModal({ onSave, onClose }) {
           { k: "proveedor",      label: "Proveedor / Comercio *", placeholder: "Ej. Supermercado Buen Precio" },
           { k: "descripcion",    label: "Descripción *", placeholder: "Ej. Almuerzo equipo de trabajo" },
           { k: "fecha",          label: "Fecha de la factura *", type: "date" },
-          { k: "monto",          label: "Monto (₡) *", type: "number", placeholder: "Ej. 9500" },
           { k: "numero_factura", label: "N° de Factura *", placeholder: "Ej. 51122" },
         ].map(({ k, label, type, placeholder }) => (
           <div key={k} style={{ marginBottom: 14 }}>
@@ -706,6 +751,12 @@ function ManualModal({ onSave, onClose }) {
             <Inp value={f[k] || ""} onChange={set(k)} type={type || "text"} placeholder={placeholder || ""} />
           </div>
         ))}
+
+        {/* Monto con formato automático */}
+        <div style={{ marginBottom: 14 }}>
+          <Lbl>Monto (₡) *</Lbl>
+          <InpMonto value={f.monto} onChange={(val) => setF((p) => ({ ...p, monto: val }))} />
+        </div>
 
         {/* Categoría */}
         <div style={{ marginBottom: 14 }}>
@@ -810,7 +861,6 @@ function EditModal({ inv, onSave, onClose }) {
           { k: "proveedor",      label: "Proveedor / Comercio" },
           { k: "descripcion",    label: "Descripción" },
           { k: "fecha",          label: "Fecha",    type: "date" },
-          { k: "monto",          label: "Monto (₡)", type: "number" },
           { k: "numero_factura", label: "N° Factura" },
         ].map(({ k, label, type }) => (
           <div key={k} style={{ marginBottom: 14 }}>
@@ -818,6 +868,12 @@ function EditModal({ inv, onSave, onClose }) {
             <Inp value={f[k] || ""} onChange={set(k)} type={type} />
           </div>
         ))}
+
+        {/* Monto con formato automático */}
+        <div style={{ marginBottom: 14 }}>
+          <Lbl>Monto (₡)</Lbl>
+          <InpMonto value={f.monto} onChange={(val) => setF((p) => ({ ...p, monto: val }))} />
+        </div>
 
         <div style={{ marginBottom: 20 }}>
           <Lbl>Categoría</Lbl>
