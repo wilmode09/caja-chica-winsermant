@@ -654,8 +654,19 @@ function ManualModal({ onSave, onClose }) {
     numero_factura: "",
     categoria: "Otro",
   });
+  const [preview, setPreview]   = useState(null);
+  const [b64Foto, setB64Foto]   = useState("");
+  const fotoRef                 = useRef();
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }));
-  const valido = f.proveedor.trim() && f.monto && Number(f.monto) > 0;
+  const valido = f.proveedor.trim() && f.descripcion.trim() && f.fecha &&
+                f.monto && Number(f.monto) > 0 && f.numero_factura.trim() && b64Foto;
+
+  const handleFoto = async (file) => {
+    if (!file) return;
+    const b64 = await comprimirImagen(file);
+    setB64Foto(b64);
+    setPreview(URL.createObjectURL(file));
+  };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", zIndex: 200,
@@ -672,17 +683,13 @@ function ManualModal({ onSave, onClose }) {
             color: C.muted, fontSize: 22, cursor: "pointer" }}>✕</button>
         </div>
 
-        <div style={{ background: C.accentLt, borderRadius: 10, padding: "10px 14px",
-          marginBottom: 16, fontSize: 13, color: C.accent, fontWeight: 600 }}>
-          📋 Completa los datos de la factura manualmente
-        </div>
-
+        {/* Campos de texto */}
         {[
           { k: "proveedor",      label: "Proveedor / Comercio *", placeholder: "Ej. Supermercado Buen Precio" },
-          { k: "descripcion",    label: "Descripción", placeholder: "Ej. Almuerzo equipo de trabajo" },
-          { k: "fecha",          label: "Fecha de la factura", type: "date" },
+          { k: "descripcion",    label: "Descripción *", placeholder: "Ej. Almuerzo equipo de trabajo" },
+          { k: "fecha",          label: "Fecha de la factura *", type: "date" },
           { k: "monto",          label: "Monto (₡) *", type: "number", placeholder: "Ej. 9500" },
-          { k: "numero_factura", label: "N° de Factura", placeholder: "Ej. 51122" },
+          { k: "numero_factura", label: "N° de Factura *", placeholder: "Ej. 51122" },
         ].map(({ k, label, type, placeholder }) => (
           <div key={k} style={{ marginBottom: 14 }}>
             <Lbl>{label}</Lbl>
@@ -690,7 +697,8 @@ function ManualModal({ onSave, onClose }) {
           </div>
         ))}
 
-        <div style={{ marginBottom: 20 }}>
+        {/* Categoría */}
+        <div style={{ marginBottom: 14 }}>
           <Lbl>Categoría</Lbl>
           <select value={f.categoria}
             onChange={(e) => setF((p) => ({ ...p, categoria: e.target.value }))}
@@ -701,9 +709,41 @@ function ManualModal({ onSave, onClose }) {
           </select>
         </div>
 
-        <p style={{ color: C.muted, fontSize: 12, marginBottom: 16 }}>* Campos obligatorios</p>
+        {/* Foto de la factura */}
+        <div style={{ marginBottom: 20 }}>
+          <Lbl>Foto de la factura *</Lbl>
+          <input ref={fotoRef} type="file" accept="image/*"
+            style={{ display: "none" }} onChange={(e) => handleFoto(e.target.files[0])} />
 
-        <Btn full onClick={() => valido && onSave({ ...f, monto: Number(f.monto) })}
+          {preview ? (
+            <div style={{ position: "relative" }}>
+              <img src={preview} alt="factura"
+                style={{ width: "100%", maxHeight: 200, objectFit: "cover",
+                  borderRadius: 10, border: `1.5px solid ${C.border}` }} />
+              <button
+                onClick={() => { setPreview(null); setB64Foto(""); fotoRef.current.value = ""; }}
+                style={{ position: "absolute", top: 8, right: 8, background: C.danger,
+                  color: "#fff", border: "none", borderRadius: "50%", width: 28, height: 28,
+                  cursor: "pointer", fontSize: 14, fontWeight: 700 }}>✕</button>
+            </div>
+          ) : (
+            <div
+              onClick={() => fotoRef.current.click()}
+              style={{ border: `2px dashed ${C.border}`, borderRadius: 10,
+                padding: "20px", textAlign: "center", cursor: "pointer",
+                background: C.card }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>🖼️</div>
+              <div style={{ fontSize: 13, color: C.muted, fontWeight: 600 }}>
+                Seleccionar foto de la galería
+              </div>
+            </div>
+          )}
+        </div>
+
+        <p style={{ color: C.muted, fontSize: 12, marginBottom: 16 }}>* Todos los campos son obligatorios</p>
+
+        <Btn full
+          onClick={() => valido && onSave({ ...f, monto: Number(f.monto), imageBase64: b64Foto, imagePreview: preview })}
           disabled={!valido}>
           Agregar factura
         </Btn>
