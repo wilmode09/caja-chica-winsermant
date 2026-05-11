@@ -712,7 +712,7 @@ function ManualModal({ onSave, onClose }) {
         {/* Foto de la factura */}
         <div style={{ marginBottom: 20 }}>
           <Lbl>Foto de la factura *</Lbl>
-          <input ref={fotoRef} type="file" accept="image/*"
+          <input ref={fotoRef} type="file" accept="image/*" capture="environment"
             style={{ display: "none" }} onChange={(e) => handleFoto(e.target.files[0])} />
 
           {preview ? (
@@ -732,9 +732,9 @@ function ManualModal({ onSave, onClose }) {
               style={{ border: `2px dashed ${C.border}`, borderRadius: 10,
                 padding: "20px", textAlign: "center", cursor: "pointer",
                 background: C.card }}>
-              <div style={{ fontSize: 28, marginBottom: 6 }}>🖼️</div>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
               <div style={{ fontSize: 13, color: C.muted, fontWeight: 600 }}>
-                Seleccionar foto de la galería
+                Tomar foto de la factura
               </div>
             </div>
           )}
